@@ -93,7 +93,8 @@ private[kinesis] class KinesisReceiver[T](
     messageHandler: Record => T,
     kinesisCreds: SparkAWSCredentials,
     dynamoDBCreds: Option[SparkAWSCredentials],
-    cloudWatchCreds: Option[SparkAWSCredentials])
+    cloudWatchCreds: Option[SparkAWSCredentials],
+    metricsFactoryClassName: Option[String])
   extends Receiver[T](storageLevel) with Logging { receiver =>
 
   /*
@@ -188,7 +189,14 @@ private[kinesis] class KinesisReceiver[T](
         new KinesisRecordProcessor(receiver, workerId)
     }
 
-    worker = new Worker(recordProcessorFactory, kinesisClientLibConfiguration)
+    worker = metricsFactoryClassName.fold {
+      new Worker(recordProcessorFactory, kinesisClientLibConfiguration)
+    }
+    { className =>
+      import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
+      val metricsFactory: IMetricsFactory = Utils.classForName(className).newInstance().asInstanceOf[IMetricsFactory]
+      new Worker(recordProcessorFactory, kinesisClientLibConfiguration, metricsFactory)
+    }
     workerThread = new Thread() {
       override def run(): Unit = {
         try {

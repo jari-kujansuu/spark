@@ -45,7 +45,8 @@ private[kinesis] class KinesisInputDStream[T: ClassTag](
     val messageHandler: Record => T,
     val kinesisCreds: SparkAWSCredentials,
     val dynamoDBCreds: Option[SparkAWSCredentials],
-    val cloudWatchCreds: Option[SparkAWSCredentials]
+    val cloudWatchCreds: Option[SparkAWSCredentials],
+    val metricsFactoryClassName: Option[String]
   ) extends ReceiverInputDStream[T](_ssc) {
 
   import KinesisReadConfigurations._
@@ -81,7 +82,7 @@ private[kinesis] class KinesisInputDStream[T: ClassTag](
   override def getReceiver(): Receiver[T] = {
     new KinesisReceiver(streamName, kinesisEndpointUrl, dynamoEndpointUrl, regionName, initialPosition,
       checkpointAppName, checkpointInterval, _storageLevel, messageHandler,
-      kinesisCreds, dynamoDBCreds, cloudWatchCreds)
+      kinesisCreds, dynamoDBCreds, cloudWatchCreds, metricsFactoryClassName)
   }
 }
 
@@ -109,6 +110,7 @@ object KinesisInputDStream {
     private var kinesisCredsProvider: Option[SparkAWSCredentials] = None
     private var dynamoDBCredsProvider: Option[SparkAWSCredentials] = None
     private var cloudWatchCredsProvider: Option[SparkAWSCredentials] = None
+    private var maybeMetricsFactoryClassName: Option[String] = None
 
     /**
      * Sets the StreamingContext that will be used to construct the Kinesis DStream. This is a
@@ -282,6 +284,11 @@ object KinesisInputDStream {
       this
     }
 
+    def metricsFactoryClassName(className: String): Builder = {
+      maybeMetricsFactoryClassName = Option(className)
+      this
+    }
+
     /**
      * Create a new instance of [[KinesisInputDStream]] with configured parameters and the provided
      * message handler.
@@ -305,7 +312,8 @@ object KinesisInputDStream {
         ssc.sc.clean(handler),
         kinesisCredsProvider.getOrElse(DefaultCredentials),
         dynamoDBCredsProvider,
-        cloudWatchCredsProvider)
+        cloudWatchCredsProvider,
+        maybeMetricsFactoryClassName)
     }
 
     /**
