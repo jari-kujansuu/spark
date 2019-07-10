@@ -100,4 +100,10 @@
     <outputDirectory>target/scala-${scala.binary.version}/classes</outputDirectory>
     <testOutputDirectory>target/scala-${scala.binary.version}/test-classes</testOutputDirectory>
   </build>
+  <distributionManagement>
+    <repository>
+      <id>nexus</id>
+      <url>https://repo.nos.to/content/repositories/NostoDependencies/</url>
+    </repository>
+  </distributionManagement>
 </project>
