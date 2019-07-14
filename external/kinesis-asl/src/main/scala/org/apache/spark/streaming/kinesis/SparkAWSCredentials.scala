@@ -84,6 +84,11 @@ private[kinesis] final case class STSCredentials(
   }
 }
 
+private[kinesis] final case class InstanceProfileCredentials() extends SparkAWSCredentials {
+
+  override def provider: AWSCredentialsProvider = InstanceProfileCredentialsProvider.getInstance
+}
+
 @InterfaceStability.Evolving
 object SparkAWSCredentials {
   /**
@@ -95,6 +100,7 @@ object SparkAWSCredentials {
   class Builder {
     private var basicCreds: Option[BasicCredentials] = None
     private var stsCreds: Option[STSCredentials] = None
+    private var instancePofileCreds: Option[InstanceProfileCredentials] = None
 
     // scalastyle:off
     /**
@@ -150,6 +156,11 @@ object SparkAWSCredentials {
       this
     }
 
+
+    def instancePofileCredentials: Builder = {
+      instancePofileCreds = Some(InstanceProfileCredentials())
+      this
+    }
     /**
      * Returns the appropriate instance of [[SparkAWSCredentials]] given the configured
      * parameters.
@@ -165,7 +176,7 @@ object SparkAWSCredentials {
      * @return [[SparkAWSCredentials]] to use for configured parameters
      */
     def build(): SparkAWSCredentials =
-      stsCreds.map(_.copy(longLivedCreds = longLivedCreds)).getOrElse(longLivedCreds)
+      stsCreds.map(_.copy(longLivedCreds = longLivedCreds)).orElse(instancePofileCreds).getOrElse(longLivedCreds)
 
     private def longLivedCreds: SparkAWSCredentials = basicCreds.getOrElse(DefaultCredentials)
   }
