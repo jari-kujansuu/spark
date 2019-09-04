@@ -47,7 +47,8 @@ private[kinesis] class KinesisInputDStream[T: ClassTag](
     val dynamoDBCreds: Option[SparkAWSCredentials],
     val cloudWatchCreds: Option[SparkAWSCredentials],
     val metricsFactoryClassName: Option[String],
-    val maybeMaxRecords: Option[Int]
+    val maybeMaxRecords: Option[Int],
+    val maybeTaskBackoffTimeMillis: Option[Long]
   ) extends ReceiverInputDStream[T](_ssc) {
 
   import KinesisReadConfigurations._
@@ -83,7 +84,7 @@ private[kinesis] class KinesisInputDStream[T: ClassTag](
   override def getReceiver(): Receiver[T] = {
     new KinesisReceiver(streamName, kinesisEndpointUrl, dynamoEndpointUrl, regionName, initialPosition,
       checkpointAppName, checkpointInterval, _storageLevel, messageHandler,
-      kinesisCreds, dynamoDBCreds, cloudWatchCreds, metricsFactoryClassName, maybeMaxRecords)
+      kinesisCreds, dynamoDBCreds, cloudWatchCreds, metricsFactoryClassName, maybeMaxRecords, maybeTaskBackoffTimeMillis)
   }
 }
 
@@ -113,6 +114,7 @@ object KinesisInputDStream {
     private var cloudWatchCredsProvider: Option[SparkAWSCredentials] = None
     private var maybeMetricsFactoryClassName: Option[String] = None
     private var maybeMaxRecords: Option[Int] = None
+    private var maybeTaskBackoffTimeMillis: Option[Long] = None
 
     /**
      * Sets the StreamingContext that will be used to construct the Kinesis DStream. This is a
@@ -296,6 +298,11 @@ object KinesisInputDStream {
       this
     }
 
+    def taskBackoffTimeMillis(t: Long): Builder = {
+      maybeTaskBackoffTimeMillis = Some(t)
+      this
+    }
+
     /**
      * Create a new instance of [[KinesisInputDStream]] with configured parameters and the provided
      * message handler.
@@ -321,7 +328,8 @@ object KinesisInputDStream {
         dynamoDBCredsProvider,
         cloudWatchCredsProvider,
         maybeMetricsFactoryClassName,
-        maybeMaxRecords)
+        maybeMaxRecords,
+        maybeTaskBackoffTimeMillis)
     }
 
     /**
