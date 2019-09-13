@@ -65,7 +65,7 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     when(receiverMock.isStopped()).thenReturn(false)
     when(receiverMock.getCurrentLimit).thenReturn(Int.MaxValue)
 
-    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId)
+    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId, None)
     recordProcessor.initialize(shardId)
     recordProcessor.processRecords(batch, checkpointerMock)
 
@@ -78,7 +78,7 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     when(receiverMock.isStopped()).thenReturn(false)
     when(receiverMock.getCurrentLimit).thenReturn(1)
 
-    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId)
+    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId, None)
     recordProcessor.initialize(shardId)
     recordProcessor.processRecords(batch, checkpointerMock)
 
@@ -92,7 +92,7 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     when(receiverMock.isStopped()).thenReturn(true)
     when(receiverMock.getCurrentLimit).thenReturn(Int.MaxValue)
 
-    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId)
+    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId, None)
     recordProcessor.processRecords(batch, checkpointerMock)
 
     verify(receiverMock, times(1)).isStopped()
@@ -108,7 +108,7 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     ).thenThrow(new RuntimeException())
 
     intercept[RuntimeException] {
-      val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId)
+      val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId, None)
       recordProcessor.initialize(shardId)
       recordProcessor.processRecords(batch, checkpointerMock)
     }
@@ -121,7 +121,7 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   test("shutdown should checkpoint if the reason is TERMINATE") {
     when(receiverMock.getLatestSeqNumToCheckpoint(shardId)).thenReturn(someSeqNum)
 
-    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId)
+    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId, None)
     recordProcessor.initialize(shardId)
     recordProcessor.shutdown(checkpointerMock, ShutdownReason.TERMINATE)
 
@@ -132,7 +132,7 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   test("shutdown should not checkpoint if the reason is something other than TERMINATE") {
     when(receiverMock.getLatestSeqNumToCheckpoint(shardId)).thenReturn(someSeqNum)
 
-    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId)
+    val recordProcessor = new KinesisRecordProcessor(receiverMock, workerId, None)
     recordProcessor.initialize(shardId)
     recordProcessor.shutdown(checkpointerMock, ShutdownReason.ZOMBIE)
     recordProcessor.shutdown(checkpointerMock, null)

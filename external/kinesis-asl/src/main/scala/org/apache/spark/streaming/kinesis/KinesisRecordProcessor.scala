@@ -18,6 +18,7 @@ package org.apache.spark.streaming.kinesis
 
 import java.util.List
 
+import scala.collection.JavaConverters._
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -39,7 +40,7 @@ import org.apache.spark.internal.Logging
  * @param receiver Kinesis receiver
  * @param workerId for logging purposes
  */
-private[kinesis] class KinesisRecordProcessor[T](receiver: KinesisReceiver[T], workerId: String)
+private[kinesis] class KinesisRecordProcessor[T](receiver: KinesisReceiver[T], workerId: String, maybeLagMillis: Option[Long])
   extends IRecordProcessor with Logging {
 
   // shardId populated during initialize()
@@ -68,6 +69,16 @@ private[kinesis] class KinesisRecordProcessor[T](receiver: KinesisReceiver[T], w
   override def processRecords(batch: List[Record], checkpointer: IRecordProcessorCheckpointer) {
     if (!receiver.isStopped()) {
       try {
+        for {
+          lag <- maybeLagMillis
+          latest <- batch.asScala.map(_.getApproximateArrivalTimestamp.getTime()).reduceOption(_ max _)
+        } {
+          val sleepMillis = latest + lag - System.currentTimeMillis()
+          if (sleepMillis > 0) {
+            logDebug(s"Sleeping $sleepMillis")
+            Thread.sleep(sleepMillis)
+          }
+        }
         // Limit the number of processed records from Kinesis stream. This is because the KCL cannot
         // control the number of aggregated records to be fetched even if we set `MaxRecords`
         // in `KinesisClientLibConfiguration`. For example, if we set 10 to the number of max
