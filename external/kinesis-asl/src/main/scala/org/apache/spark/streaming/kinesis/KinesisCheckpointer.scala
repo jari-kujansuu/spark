@@ -82,7 +82,7 @@ private[kinesis] class KinesisCheckpointer(
   }
 
   /** Perform the checkpoint. */
-  private def checkpoint(shardId: String, checkpointer: IRecordProcessorCheckpointer): Unit = {
+  def checkpoint(shardId: String, checkpointer: IRecordProcessorCheckpointer): Unit = {
     try {
       if (checkpointer != null) {
         receiver.getLatestSeqNumToCheckpoint(shardId).foreach { latestSeqNum =>
@@ -92,7 +92,7 @@ private[kinesis] class KinesisCheckpointer(
           if (lastSeqNum == null || latestSeqNum > lastSeqNum) {
             /* Perform the checkpoint */
             KinesisRecordProcessor.retryRandom(checkpointer.checkpoint(latestSeqNum), 4, 100)
-            logDebug(s"Checkpoint:  WorkerId $workerId completed checkpoint at sequence number" +
+            logInfo(s"HD-381 - Checkpoint:  WorkerId $workerId completed checkpoint at sequence number" +
               s" $latestSeqNum for shardId $shardId")
             lastCheckpointedSeqNums.put(shardId, latestSeqNum)
           }
