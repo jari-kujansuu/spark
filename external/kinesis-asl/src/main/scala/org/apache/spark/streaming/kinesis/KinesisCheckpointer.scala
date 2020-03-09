@@ -92,7 +92,7 @@ private[kinesis] class KinesisCheckpointer(
           if (lastSeqNum == null || latestSeqNum > lastSeqNum) {
             /* Perform the checkpoint */
             KinesisRecordProcessor.retryRandom(checkpointer.checkpoint(latestSeqNum), 4, 100)
-            logInfo(s"HD-381 - Checkpoint:  WorkerId $workerId completed checkpoint at sequence number" +
+            logWarning(s"HD-381 - Checkpoint:  WorkerId $workerId completed checkpoint at sequence number" +
               s" $latestSeqNum for shardId $shardId")
             lastCheckpointedSeqNums.put(shardId, latestSeqNum)
           }

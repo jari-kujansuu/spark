@@ -56,7 +56,7 @@ private[kinesis] class KinesisRecordProcessor[T](receiver: KinesisReceiver[T], w
    */
   override def shutdownRequested(iRecordProcessorCheckpointer: IRecordProcessorCheckpointer): Unit = {
     Option(shardId).foreach { shard =>
-      logInfo(s"HD-381 - KinesisRecordProcessor.shutdownRequested called for shard ${shard}")
+      logWarning(s"HD-381 - KinesisRecordProcessor.shutdownRequested called for shard ${shard}")
       // Stop reading Kinesis stream but keep checkpointing
       receiver.onStop(stopCheckpointing = false)
       // Checkpoint immediately instead of relying on scheduled checkpointing in KinesisCheckpointer
