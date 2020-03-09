@@ -24,6 +24,7 @@ import scala.util.control.NonFatal
 
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.{InvalidStateException, KinesisClientLibDependencyException, ShutdownException, ThrottlingException}
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.{IRecordProcessor, IRecordProcessorCheckpointer}
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IShutdownNotificationAware
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason
 import com.amazonaws.services.kinesis.model.Record
 
@@ -41,7 +42,28 @@ import org.apache.spark.internal.Logging
  * @param workerId for logging purposes
  */
 private[kinesis] class KinesisRecordProcessor[T](receiver: KinesisReceiver[T], workerId: String, maybeLagMillis: Option[Long])
-  extends IRecordProcessor with Logging {
+  extends IRecordProcessor with IShutdownNotificationAware with Logging {
+
+  /**
+   * Graceful shutdown of Kinesis record processor to avoid
+   * "Can't update checkpoint - instance doesn't hold the lease for this shard" errors.
+   *
+   * See more details from:
+   * - [[https://github.com/awslabs/amazon-kinesis-client/issues/79]]
+   * - [[https://github.com/awslabs/amazon-kinesis-client/pull/109]]
+   *
+   * @param iRecordProcessorCheckpointer
+   */
+  override def shutdownRequested(iRecordProcessorCheckpointer: IRecordProcessorCheckpointer): Unit = {
+    Option(shardId).foreach { shard =>
+      logWarning(s"HD-381 - KinesisRecordProcessor.shutdownRequested called for shard ${shard}")
+      // Stop reading Kinesis stream but keep checkpointing
+      receiver.onStop(stopCheckpointing = false)
+      // Checkpoint immediately instead of relying on scheduled checkpointing in KinesisCheckpointer
+      // because Kinesis record processors will be terminated.
+      receiver.checkpoint(shard, iRecordProcessorCheckpointer)
+    }
+  }
 
   // shardId populated during initialize()
   @volatile

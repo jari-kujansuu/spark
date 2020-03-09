@@ -223,12 +223,16 @@ private[kinesis] class KinesisReceiver[T](
     logInfo(s"Started receiver with workerId $workerId")
   }
 
+  override def onStop(): Unit = {
+    onStop(stopCheckpointing = true)
+  }
+
   /**
    * This is called when the KinesisReceiver stops.
    * The KCL worker.shutdown() method stops the receiving/processing threads.
    * The KCL will do its best to drain and checkpoint any in-flight records upon shutdown.
    */
-  override def onStop() {
+  def onStop(stopCheckpointing: Boolean) {
     if (workerThread != null) {
       if (worker != null) {
         worker.shutdown()
@@ -239,7 +243,7 @@ private[kinesis] class KinesisReceiver[T](
       logInfo(s"Stopped receiver for workerId $workerId")
     }
     workerId = null
-    if (kinesisCheckpointer != null) {
+    if (stopCheckpointing && kinesisCheckpointer != null) {
       kinesisCheckpointer.shutdown()
       kinesisCheckpointer = null
     }
@@ -274,6 +278,10 @@ private[kinesis] class KinesisReceiver[T](
   def setCheckpointer(shardId: String, checkpointer: IRecordProcessorCheckpointer): Unit = {
     assert(kinesisCheckpointer != null, "Kinesis Checkpointer not initialized!")
     kinesisCheckpointer.setCheckpointer(shardId, checkpointer)
+  }
+
+  def checkpoint(shardId: String, checkpointer: IRecordProcessorCheckpointer): Unit = {
+    kinesisCheckpointer.checkpoint(shardId, checkpointer)
   }
 
   /**
